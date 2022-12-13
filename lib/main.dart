@@ -31,6 +31,9 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   double _sliderValue = 0.0;
+  static const double minVal = 0.0, max = 100.0;
+  final double thumbWidth = 20.0;
+  final int divider = 5;
 
   // This method is called when the slider changes
   void onSliderChanged(double value) {
@@ -42,9 +45,6 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width - 20;
-    const minVal = 0.0;
-    const max = 100.0;
-    const thumbWidth = 20.0;
     final thumbPosition = (_sliderValue / max) * (screenWidth - thumbWidth);
     return Scaffold(
       appBar: AppBar(
@@ -84,6 +84,14 @@ class _MyHomePageState extends State<MyHomePage> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: List.generate(
+                            divider,
+                            (index) => CustomPaint(
+                                  painter: CirclePainter(),
+                                  size: const Size(20, 20),
+                                ))),
                     Positioned(
                       left: thumbPosition,
                       child: Container(
@@ -103,5 +111,38 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
     );
+  }
+}
+
+class CirclePainter extends CustomPainter {
+  final Color? mainColor;
+  final Color? secondColor;
+  CirclePainter({this.mainColor, this.secondColor});
+  @override
+  void paint(Canvas canvas, Size size) {
+    //inner circle
+    var paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(const Offset(10, 10), 10, paint);
+
+    //outer circle
+    paint
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4;
+    canvas.drawCircle(const Offset(10, 10), 10, paint);
+
+    //inner circle
+    paint
+      ..color = Colors.grey
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+    canvas.drawCircle(const Offset(10, 10), 8, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) {
+    return false;
   }
 }
