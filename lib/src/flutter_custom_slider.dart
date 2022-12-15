@@ -1,55 +1,42 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
+import 'custom_circle_divider.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+class FlutterCustomSlider extends StatefulWidget {
+  ///slider properties
+  final Color backgroundColor;
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  ///slider foreground color
+  final Color? foreGroundColor;
 
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: MyHomePage(
-        title: 'Flutter Demo Home Page',
-        height: 10,
-        onValueChanged: (p0) {},
-        sliderColor: Colors.orangeAccent,
-      ),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  final Color sliderColor;
+  ///slider height
   final double height;
+
+  ///slider thumb size
   final double? thumbSize;
+
+  ///slider value changed callback
   final Function(double) onValueChanged;
-  const MyHomePage({
+
+  ///slider divider
+  final int? divider, minVal, max;
+  const FlutterCustomSlider({
     super.key,
-    required this.title,
     required this.onValueChanged,
     required this.height,
     this.thumbSize,
-    required this.sliderColor,
+    required this.backgroundColor,
+    this.divider,
+    this.minVal,
+    this.max,
+    this.foreGroundColor,
   });
 
-  final String title;
-
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<FlutterCustomSlider> createState() => _FlutterCustomSliderState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _FlutterCustomSliderState extends State<FlutterCustomSlider> {
   double _sliderValue = 0.0;
-  static const double minVal = 0.0, max = 100.0;
-  final double thumbWidth = 20.0;
-  final int divider = 5;
 
   // This method is called when the slider changes
   void onSliderChanged(double value) {
@@ -65,13 +52,22 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final double sliderWidth = MediaQuery.of(context).size.width - 100;
+    //calculate slider width
+    final double sliderWidth = MediaQuery.of(context).size.width - 20;
+
+    //calculate max and min value
+    final double maxVal = widget.max?.toDouble() ?? 100;
+    final double minVal = widget.minVal?.toDouble() ?? 0;
+
+    //calculate thumb size
     final double thumbSize = widget.thumbSize ?? widget.height * 2;
-    final double thumbPosition = (_sliderValue / max) * sliderWidth;
+
+    //calculate thumb position
+    final double thumbPosition = (_sliderValue / maxVal) * sliderWidth;
+
+    //calculate divider
+    final int divider = widget.divider ?? 0;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -81,50 +77,58 @@ class _MyHomePageState extends State<MyHomePage> {
             GestureDetector(
               onPanUpdate: (details) {
                 setState(() {
-                  _sliderValue += details.delta.dx / sliderWidth * max;
+                  // Calculate the new slider value
+                  _sliderValue += details.delta.dx / sliderWidth * maxVal;
+
+                  // Check if the value is in range
                   if (_sliderValue < minVal) {
                     _sliderValue = minVal;
-                  } else if (_sliderValue > max) {
-                    _sliderValue = max;
+                  } else if (_sliderValue > maxVal) {
+                    _sliderValue = maxVal;
                   }
 
-                  // Snap to nearest value
-                  _sliderValue = (_sliderValue / (max / 4)) * (max / 4);
+                  // Round the value to the nearest 25 for snapping
+                  _sliderValue = _sliderValue.roundToDouble() % 25 == 0 ? _sliderValue.roundToDouble() : _sliderValue;
 
                   // Update the value
                   widget.onValueChanged(_sliderValue.roundToDouble());
                 });
               },
+              //slider container
               child: SizedBox(
                 height: widget.height * 2,
-                width: sliderWidth + thumbWidth,
+                width: sliderWidth + thumbSize,
                 child: Stack(
                   alignment: AlignmentDirectional.center,
                   fit: StackFit.loose,
                   children: [
+                    //slider background
                     Container(
                       height: widget.height,
                       width: sliderWidth,
                       decoration: BoxDecoration(
-                        color: widget.sliderColor.withOpacity(0.2),
+                        color: widget.foreGroundColor ?? widget.backgroundColor.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
+
+                    //slider foreground
                     Align(
                         alignment: Alignment.centerLeft,
                         child: SizedBox(
                           height: widget.height,
                           width: thumbPosition,
-                          child: ColoredBox(color: widget.sliderColor),
+                          child: ColoredBox(color: widget.backgroundColor),
                         )),
+
+                    //Dividers
                     Row(
                       mainAxisSize: MainAxisSize.max,
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(divider, (index) {
-                        final indexPositionInRow = (sliderWidth / divider) * index + thumbWidth / 2;
-                        final bool isActive = (indexPositionInRow) < thumbPosition;
-
-                        //calculate index position
+                        //calculate index position in row
+                        final double position = ((sliderWidth + (thumbSize * 3)) / divider) * index;
+                        final bool isActive = position <= thumbPosition;
 
                         return CustomPaint(
                           painter: CirclePainter(
@@ -135,6 +139,8 @@ class _MyHomePageState extends State<MyHomePage> {
                         );
                       }),
                     ),
+
+                    //slider thumb
                     Positioned(
                       left: thumbPosition,
                       child: SizedBox.square(
@@ -155,38 +161,5 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
     );
-  }
-}
-
-class CirclePainter extends CustomPainter {
-  final Color? mainColor;
-  final Color? secondColor;
-  CirclePainter({this.mainColor, this.secondColor});
-  @override
-  void paint(Canvas canvas, Size size) {
-    //inner circle
-    var paint = Paint()
-      ..color = mainColor ?? Colors.blue
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(const Offset(10, 10), 10, paint);
-
-    //outer circle
-    paint
-      ..color = mainColor ?? Colors.blue
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4;
-    canvas.drawCircle(const Offset(10, 10), 10, paint);
-
-    //inner circle
-    paint
-      ..color = secondColor ?? Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
-    canvas.drawCircle(const Offset(10, 10), 8, paint);
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) {
-    return false;
   }
 }
