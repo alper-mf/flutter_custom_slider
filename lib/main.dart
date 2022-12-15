@@ -15,13 +15,29 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: MyHomePage(
+        title: 'Flutter Demo Home Page',
+        height: 10,
+        onValueChanged: (p0) {},
+        sliderColor: Colors.orangeAccent,
+      ),
     );
   }
 }
 
 class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+  final Color sliderColor;
+  final double height;
+  final double? thumbSize;
+  final Function(double) onValueChanged;
+  const MyHomePage({
+    super.key,
+    required this.title,
+    required this.onValueChanged,
+    required this.height,
+    this.thumbSize,
+    required this.sliderColor,
+  });
 
   final String title;
 
@@ -43,9 +59,15 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width - 20;
-    final thumbPosition = (_sliderValue / max) * (screenWidth - thumbWidth);
+    final double sliderWidth = MediaQuery.of(context).size.width - 100;
+    final double thumbSize = widget.thumbSize ?? widget.height * 2;
+    final double thumbPosition = (_sliderValue / max) * sliderWidth;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -59,7 +81,7 @@ class _MyHomePageState extends State<MyHomePage> {
             GestureDetector(
               onPanUpdate: (details) {
                 setState(() {
-                  _sliderValue += details.delta.dx / screenWidth * max;
+                  _sliderValue += details.delta.dx / sliderWidth * max;
                   if (_sliderValue < minVal) {
                     _sliderValue = minVal;
                   } else if (_sliderValue > max) {
@@ -67,39 +89,61 @@ class _MyHomePageState extends State<MyHomePage> {
                   }
 
                   // Snap to nearest value
-                  _sliderValue = (_sliderValue / (max / 4)) * (max / 4).round();
+                  _sliderValue = (_sliderValue / (max / 4)) * (max / 4);
+
+                  // Update the value
+                  widget.onValueChanged(_sliderValue.roundToDouble());
                 });
               },
               child: SizedBox(
-                height: 50,
-                width: screenWidth,
+                height: widget.height * 2,
+                width: sliderWidth + thumbWidth,
                 child: Stack(
                   alignment: AlignmentDirectional.center,
+                  fit: StackFit.loose,
                   children: [
                     Container(
-                      height: 10,
-                      width: screenWidth,
+                      height: widget.height,
+                      width: sliderWidth,
                       decoration: BoxDecoration(
-                        color: Colors.grey,
+                        color: widget.sliderColor.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
+                    Align(
+                        alignment: Alignment.centerLeft,
+                        child: SizedBox(
+                          height: widget.height,
+                          width: thumbPosition,
+                          child: ColoredBox(color: widget.sliderColor),
+                        )),
                     Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: List.generate(
-                            divider,
-                            (index) => CustomPaint(
-                                  painter: CirclePainter(),
-                                  size: const Size(20, 20),
-                                ))),
+                      mainAxisSize: MainAxisSize.max,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: List.generate(divider, (index) {
+                        final indexPositionInRow = (sliderWidth / divider) * index + thumbWidth / 2;
+                        final bool isActive = (indexPositionInRow) < thumbPosition;
+
+                        //calculate index position
+
+                        return CustomPaint(
+                          painter: CirclePainter(
+                            mainColor: isActive ? Colors.blue : Colors.white,
+                            secondColor: Colors.blue,
+                          ),
+                          size: Size(thumbSize, thumbSize),
+                        );
+                      }),
+                    ),
                     Positioned(
                       left: thumbPosition,
-                      child: Container(
-                        width: 20,
-                        height: 20,
-                        decoration: BoxDecoration(
-                          color: Colors.blue[600],
-                          shape: BoxShape.circle,
+                      child: SizedBox.square(
+                        dimension: thumbSize,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.blue[600],
+                            shape: BoxShape.circle,
+                          ),
                         ),
                       ),
                     ),
@@ -122,20 +166,20 @@ class CirclePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     //inner circle
     var paint = Paint()
-      ..color = Colors.white
+      ..color = mainColor ?? Colors.blue
       ..style = PaintingStyle.fill;
     canvas.drawCircle(const Offset(10, 10), 10, paint);
 
     //outer circle
     paint
-      ..color = Colors.white
+      ..color = mainColor ?? Colors.blue
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4;
     canvas.drawCircle(const Offset(10, 10), 10, paint);
 
     //inner circle
     paint
-      ..color = Colors.grey
+      ..color = secondColor ?? Colors.white
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
     canvas.drawCircle(const Offset(10, 10), 8, paint);
